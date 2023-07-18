@@ -1,19 +1,21 @@
 package com.raphael.cloudbasedvendormanagementsystem.data.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "cloud_vendor_info")
 @Getter
 @Setter
 @ToString
 public class CloudVendor {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @JsonIgnore
     private Long vendorId;
+
     private String name;
     private String address;
     private String phoneNumber;
