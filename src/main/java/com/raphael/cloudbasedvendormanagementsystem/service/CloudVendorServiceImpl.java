@@ -2,47 +2,47 @@ package com.raphael.cloudbasedvendormanagementsystem.service;
 
 import com.raphael.cloudbasedvendormanagementsystem.data.model.CloudVendor;
 import com.raphael.cloudbasedvendormanagementsystem.data.repository.CloudVendorRepository;
-import com.raphael.cloudbasedvendormanagementsystem.dtos.request.CreateCloudVendorRequest;
-import com.raphael.cloudbasedvendormanagementsystem.dtos.request.UpdateCloudVendorRequest;
-import com.raphael.cloudbasedvendormanagementsystem.dtos.response.CreateCloudVendorResponse;
-import com.raphael.cloudbasedvendormanagementsystem.dtos.response.UpdateCloudVendorResponse;
-import com.raphael.cloudbasedvendormanagementsystem.exceptions.CloudVendorManagementException;
+import com.raphael.cloudbasedvendormanagementsystem.dto.request.CreateCloudVendorRequest;
+import com.raphael.cloudbasedvendormanagementsystem.dto.request.UpdateCloudVendorRequest;
+import com.raphael.cloudbasedvendormanagementsystem.dto.response.CreateCloudVendorResponse;
+import com.raphael.cloudbasedvendormanagementsystem.dto.response.GetCloudVendorResponse;
+import com.raphael.cloudbasedvendormanagementsystem.dto.response.UpdateCloudVendorResponse;
+import com.raphael.cloudbasedvendormanagementsystem.exception.CloudVendorAlreadyExistException;
+import com.raphael.cloudbasedvendormanagementsystem.exception.CloudVendorNotFoundException;
+import lombok.AllArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@AllArgsConstructor
 public class CloudVendorServiceImpl implements CloudVendorService{
     private final CloudVendorRepository cloudVendorRepository;
-
-    public CloudVendorServiceImpl(CloudVendorRepository cloudVendorRepository) {
-        this.cloudVendorRepository = cloudVendorRepository;
-    }
+    private final ModelMapper modelMapper;
 
     @Override
     public CreateCloudVendorResponse createCloudVendor(CreateCloudVendorRequest createCloudVendorRequest) {
         Optional<CloudVendor> optionalCloudVendor = cloudVendorRepository.findByName(createCloudVendorRequest.getName());
-        if (optionalCloudVendor.isPresent()){
-            throw new CloudVendorManagementException("cloud vendor with the name " + createCloudVendorRequest.getName() + " already exist");
-        }
-        CloudVendor cloudVendor = new CloudVendor(
-                createCloudVendorRequest.getName(),
-                createCloudVendorRequest.getAddress(),
-                createCloudVendorRequest.getPhoneNumber()
-        );
+        if (optionalCloudVendor.isPresent()) throw new CloudVendorAlreadyExistException("Cloud Vendor already exist");
+        CloudVendor cloudVendor = modelMapper.map(createCloudVendorRequest, CloudVendor.class);
         cloudVendorRepository.save(cloudVendor);
-        CreateCloudVendorResponse createCloudVendorResponse = new CreateCloudVendorResponse();
-        createCloudVendorResponse.setMessage("cloud vendor with the name " + createCloudVendorRequest.getName() + " has been successfully created");
-        return createCloudVendorResponse;
+        return CreateCloudVendorResponse.builder()
+                .message("Cloud vendor has been created")
+                .build();
     }
     @Override
-    public CloudVendor getCloudVendorById(Long vendorId) {
+    public GetCloudVendorResponse getCloudVendorById(Long vendorId) {
         Optional<CloudVendor> optionalCloudVendor = cloudVendorRepository.findById(vendorId);
-        if (optionalCloudVendor.isEmpty()){
-            throw new CloudVendorManagementException("cloud vendor with the id " + vendorId + " is not present");
-        }
-        return optionalCloudVendor.get();
+        if (optionalCloudVendor.isEmpty()) throw new CloudVendorNotFoundException("Requested Cloud Vendor does not exist");
+        // CloudVendor cloudVendor = optionalCloudVendor.get();
+        return GetCloudVendorResponse.builder()
+                .cloudVendor(optionalCloudVendor.get())
+                .message("Requested Vendor Details are given here")
+                .status(HttpStatus.OK)
+                .build();
     }
 
     @Override
@@ -52,37 +52,28 @@ public class CloudVendorServiceImpl implements CloudVendorService{
     @Override
     public UpdateCloudVendorResponse updateCloudVendor(Long vendorId, UpdateCloudVendorRequest updateCloudVendorRequest) {
         Optional<CloudVendor> optionalCloudVendor = cloudVendorRepository.findById(vendorId);
-        if (optionalCloudVendor.isEmpty()){
-            throw new CloudVendorManagementException("cloud vendor with the id " + vendorId + " does not exist");
-        }
+        if (optionalCloudVendor.isEmpty()) throw new CloudVendorNotFoundException("Requested Cloud Vendor does not exist");
         CloudVendor cloudVendor = optionalCloudVendor.get();
-        if (!updateCloudVendorRequest.getName().equals(cloudVendor.getName())){
-            cloudVendor.setName(updateCloudVendorRequest.getName());
-        }
-        if (!updateCloudVendorRequest.getAddress().equals(cloudVendor.getAddress())){
-            cloudVendor.setAddress(updateCloudVendorRequest.getAddress());
-        }
-        if (!updateCloudVendorRequest.getPhoneNumber().equals(cloudVendor.getPhoneNumber())){
-            cloudVendor.setPhoneNumber(updateCloudVendorRequest.getPhoneNumber());
-        }
+        modelMapper.map(updateCloudVendorRequest, cloudVendor);
         cloudVendorRepository.save(cloudVendor);
-        UpdateCloudVendorResponse updateCloudVendorResponse = new UpdateCloudVendorResponse();
-        updateCloudVendorResponse.setMessage("cloud vendor with the id " + vendorId + " has been updated successfully");
-        return updateCloudVendorResponse;
+        return UpdateCloudVendorResponse.builder()
+                .message("Cloud Vendor details has been updated")
+                .build();
     }
 
     @Override
-    public void deleteCloudVendor(Long vendorId) {
+    public String deleteCloudVendorById(Long vendorId) {
         Optional<CloudVendor> optionalCloudVendor = cloudVendorRepository.findById(vendorId);
-        if (optionalCloudVendor.isEmpty()){
-            throw new CloudVendorManagementException("cloud vendor with the id " + vendorId + " does not exist");
-        }
+        if (optionalCloudVendor.isEmpty()) throw new CloudVendorNotFoundException("Requested Cloud Vendor does not exist");
         CloudVendor cloudVendor = optionalCloudVendor.get();
         cloudVendorRepository.delete(cloudVendor);
+        return "Cloud Vendor has been deleted";
     }
 
     @Override
-    public void deleteAllCloudVendors() {
+    public String deleteAllCloudVendors() {
         cloudVendorRepository.deleteAll();
+        return "All Cloud Vendors has been deleted";
     }
+
 }
